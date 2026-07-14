@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MATCHDAY — расписание матчей</title>
+<style>
+  :root{
+    --pitch-dark:#0a2a1f;
+    --pitch:#10402f;
+    --pitch-light:#1c5c42;
+    --chalk:#f3f1e7;
+    --chalk-dim:#cfd4c9;
+    --gold:#e8b23d;
+    --card-red:#c1443c;
+    --line:#3a6b52;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--pitch-dark);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 80px),
+      radial-gradient(ellipse at top, var(--pitch) 0%, var(--pitch-dark) 70%);
+    color:var(--chalk);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .scoreboard-font{
+    font-family:'Courier New', ui-monospace, monospace;
+    letter-spacing:0.5px;
+  }
+  header{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, var(--pitch-dark) 80%, transparent);
+    backdrop-filter:blur(6px);
+    padding:22px 24px 14px;
+    border-bottom:2px solid var(--line);
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    max-width:1100px; margin:0 auto;
+  }
+  .brand h1{
+    font-family:Arial Black, Arial, sans-serif;
+    font-weight:900;
+    font-size:clamp(28px, 5vw, 42px);
+    letter-spacing:1px;
+    color:var(--chalk);
+    text-transform:uppercase;
+  }
+  .brand h1 span{color:var(--gold);}
+  .brand .sub{
+    font-size:13px;
+    color:var(--chalk-dim);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    border-left:2px solid var(--gold);
+    padding-left:12px;
+  }
+  .controls{
+    max-width:1100px; margin:16px auto 0;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  .tab{
+    background:transparent;
+    border:1.5px solid var(--line);
+    color:var(--chalk-dim);
+    padding:8px 18px;
+    border-radius:2px;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:all .15s ease;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  }
+  .tab:hover{border-color:var(--gold); color:var(--chalk);}
+  .tab.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:var(--pitch-dark);
+  }
+  .search{
+    margin-left:auto;
+    background:rgba(255,255,255,0.06);
+    border:1.5px solid var(--line);
+    color:var(--chalk);
+    padding:8px 14px;
+    border-radius:2px;
+    font-size:13px;
+    min-width:200px;
+  }
+  .search::placeholder{color:var(--chalk-dim);}
+  .search:focus{outline:none; border-color:var(--gold);}
+
+  main{max-width:1100px; margin:0 auto; padding:28px 24px;}
+
+  .next-label{
+    font-size:12px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--gold); margin-bottom:10px; font-weight:700;
+  }
+
+  .hero-ticket{
+    background:linear-gradient(135deg, var(--pitch-light), var(--pitch));
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:26px 30px;
+    display:flex; align-items:center; justify-content:space-between; gap:20px;
+    flex-wrap:wrap;
+    position:relative;
+    margin-bottom:36px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+  }
+  .hero-ticket::before, .hero-ticket::after{
+    content:"";
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:24px; height:24px; border-radius:50%;
+    background:var(--pitch-dark);
+  }
+  .hero-ticket::before{left:-12px;}
+  .hero-ticket::after{right:-12px;}
+  .hero-teams{
+    display:flex; align-items:center; gap:18px; font-family:Arial Black, sans-serif;
+    font-size:clamp(20px,3.4vw,30px); text-transform:uppercase; flex-wrap:wrap;
+  }
+  .hero-teams .vs{color:var(--gold); font-size:16px; font-weight:400;}
+  .hero-meta{text-align:right;}
+  .hero-meta .league-tag{
+    font-size:11px; letter-spacing:2px; color:var(--chalk-dim); text-transform:uppercase; margin-bottom:6px;
+  }
+  .countdown{
+    font-family:'Courier New', ui-monospace, monospace;
+    font-size:clamp(22px,3vw,30px);
+    color:var(--gold);
+    font-weight:700;
+  }
+  .kickoff-date{font-size:13px; color:var(--chalk-dim); margin-top:4px;}
+
+  .day-group{margin-bottom:30px;}
+  .day-header{
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:14px;
+  }
+  .day-header .date{
+    font-family:Arial Black, sans-serif;
+    font-size:14px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--chalk);
+    background:var(--pitch);
+    border:1px solid var(--line);
+    padding:5px 12px;
+    border-radius:2px;
+  }
+  .day-header .rule{flex:1; height:1px; background:var(--line);}
+
+  .ticket{
+    display:grid;
+    grid-template-columns:70px 1fr auto 90px;
+    align-items:center;
+    gap:16px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--line);
+    border-left:3px solid var(--gold);
+    border-radius:2px;
+    padding:14px 18px;
+    margin-bottom:10px;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .ticket:hover{background:rgba(232,178,61,0.06); transform:translateX(2px);}
+  .ticket .time{
+    font-family:'Courier New', ui-monospace, monospace;
+    font-size:16px; font-weight:700; color:var(--gold);
+    text-align:center;
+    border-right:1px dashed var(--line);
+    padding-right:14px;
+  }
+  .ticket .matchup{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-size:15px; font-weight:600;
+  }
+  .ticket .matchup .away{color:var(--chalk-dim); font-weight:500;}
+  .ticket .matchup .dash{color:var(--gold); font-size:12px;}
+  .ticket .league-pill{
+    font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--chalk-dim); border:1px solid var(--line);
+    padding:3px 8px; border-radius:10px; white-space:nowrap;
+  }
+  .ticket .form-bar{
+    width:90px; height:6px; border-radius:3px; overflow:hidden;
+    display:flex; background:var(--pitch-dark);
+  }
+  .ticket .form-bar div{height:100%;}
+
+  .empty{
+    text-align:center; padding:60px 20px; color:var(--chalk-dim);
+    font-size:14px; letter-spacing:1px;
+  }
+
+  footer{
+    max-width:1100px; margin:20px auto 0; padding:0 24px;
+    color:var(--chalk-dim); font-size:12px; text-align:center;
+    letter-spacing:0.5px;
+  }
+
+  @media (max-width:600px){
+    .ticket{grid-template-columns:56px 1fr; grid-template-rows:auto auto;}
+    .ticket .league-pill{grid-column:1/2; grid-row:2;}
+    .ticket .form-bar{grid-column:2/3; grid-row:2; justify-self:end;}
+    .hero-ticket{flex-direction:column; align-items:flex-start;}
+    .hero-meta{text-align:left;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>MATCH<span>DAY</span></h1>
+    <div class="sub">Tashkent kickoff times</div>
+  </div>
+  <div class="controls">
+    <button class="tab active" data-league="all">Все лиги</button>
+    <button class="tab" data-league="Premier League">Премьер-лига</button>
+    <button class="tab" data-league="La Liga">Ла Лига</button>
+    <input class="search" id="searchInput" placeholder="Найти команду...">
+  </div>
+</header>
+
+<main>
+  <div id="heroSection"></div>
+  <div id="matchList"></div>
+</main>
+
+<footer>
+  Данные показаны в часовом поясе Ташкента (UTC+5) · снимок расписания на 14 июля 2026 · Реальные результаты и время могут измениться, сверяйтесь с официальными источниками лиг
+</footer>
+
+<script>
+const matches = [
+  {league:"Premier League", home:"Arsenal FC", away:"Coventry City", start:"2026-08-22T00:00:00+05:00", prob:{home:83.2, away:5.1, draw:11.7}},
+  {league:"Premier League", home:"Hull City", away:"Manchester United", start:"2026-08-22T16:30:00+05:00", prob:{home:13.9, away:66, draw:20.1}},
+  {league:"Premier League", home:"Everton FC", away:"Crystal Palace", start:"2026-08-22T19:00:00+05:00", prob:{home:45, away:27.7, draw:27.3}},
+  {league:"Premier League", home:"Ipswich Town", away:"Sunderland AFC", start:"2026-08-22T19:00:00+05:00", prob:{home:35, away:36.5, draw:28.5}},
+  {league:"Premier League", home:"Nottingham Forest", away:"Leeds United", start:"2026-08-22T19:00:00+05:00", prob:{home:42.5, away:30, draw:27.5}},
+  {league:"Premier League", home:"Brentford FC", away:"Tottenham Hotspur", start:"2026-08-22T21:30:00+05:00", prob:{home:42.4, away:31.7, draw:25.9}},
+  {league:"Premier League", home:"Brighton & Hove Albion", away:"Aston Villa", start:"2026-08-23T18:00:00+05:00", prob:{home:41.7, away:32.6, draw:25.7}},
+  {league:"Premier League", home:"Manchester City", away:"AFC Bournemouth", start:"2026-08-23T18:00:00+05:00", prob:{home:66.2, away:15.6, draw:18.2}},
+  {league:"Premier League", home:"Newcastle United", away:"Liverpool FC", start:"2026-08-23T20:30:00+05:00", prob:{home:32.9, away:42.8, draw:24.3}},
+  {league:"Premier League", home:"Fulham FC", away:"Chelsea FC", start:"2026-08-25T00:00:00+05:00", prob:{home:31, away:43.1, draw:25.9}},
+  {league:"La Liga", home:"Deportivo Alaves", away:"Getafe CF", start:"2026-08-15T22:30:00+05:00", prob:{home:40.1, away:26.7, draw:33.2}},
+  {league:"La Liga", home:"Atletico Madrid", away:"Malaga CF", start:"2026-08-17T00:00:00+05:00", prob:{home:75.4, away:8.4, draw:16.2}},
+  {league:"La Liga", home:"RC Celta de Vigo", away:"CA Osasuna", start:"2026-08-17T00:00:00+05:00", prob:{home:47.1, away:24.8, draw:28.1}},
+  {league:"La Liga", home:"RC Deportivo De La Coruna", away:"Elche CF", start:"2026-08-17T00:00:00+05:00", prob:{home:41.6, away:28.7, draw:29.7}},
+  {league:"La Liga", home:"Espanyol Barcelona", away:"Levante UD", start:"2026-08-17T00:00:00+05:00", prob:{home:48.1, away:23.9, draw:28}},
+  {league:"La Liga", home:"FC Barcelona", away:"Athletic Bilbao", start:"2026-08-17T00:00:00+05:00", prob:{home:67.2, away:14.3, draw:18.5}},
+  {league:"La Liga", home:"Racing Santander", away:"Villarreal CF", start:"2026-08-17T00:00:00+05:00", prob:{home:27.9, away:44.8, draw:27.3}},
+  {league:"La Liga", home:"Real Madrid", away:"Real Sociedad San Sebastian", start:"2026-08-17T00:00:00+05:00", prob:{home:66.4, away:14.5, draw:19.1}},
+  {league:"La Liga", home:"Sevilla FC", away:"Rayo Vallecano", start:"2026-08-17T00:00:00+05:00", prob:{home:41.4, away:28.9, draw:29.7}},
+  {league:"La Liga", home:"Valencia CF", away:"Real Betis Seville", start:"2026-08-17T00:00:00+05:00", prob:{home:35.5, away:35.6, draw:28.9}},
+];
+
+matches.sort((a,b)=> new Date(a.start) - new Date(b.start));
+
+let activeLeague = "all";
+let searchTerm = "";
+
+function fmtDay(d){
+  return d.toLocaleDateString('ru-RU',{weekday:'short', day:'2-digit', month:'short'}).toUpperCase();
+}
+function fmtTime(d){
+  return d.toLocaleTimeString('ru-RU',{hour:'2-digit', minute:'2-digit'});
+}
+function leagueShort(l){
+  return l === "Premier League" ? "АПЛ" : "Ла Лига";
+}
+
+function countdownStr(ms){
+  if(ms <= 0) return "СЕЙЧАС";
+  const days = Math.floor(ms/86400000);
+  const hrs = Math.floor((ms%86400000)/3600000);
+  const mins = Math.floor((ms%3600000)/60000);
+  if(days > 0) return `${days}д ${hrs}ч`;
+  if(hrs > 0) return `${hrs}ч ${mins}м`;
+  return `${mins}м`;
+}
+
+function renderHero(list){
+  const heroEl = document.getElementById('heroSection');
+  const upcoming = list.filter(m => new Date(m.start) > new Date());
+  if(upcoming.length === 0){ heroEl.innerHTML = ""; return; }
+  const m = upcoming[0];
+  const d = new Date(m.start);
+  heroEl.innerHTML = `
+    <div class="next-label">Ближайший матч</div>
+    <div class="hero-ticket">
+      <div class="hero-teams">
+        ${m.home} <span class="vs">VS</span> ${m.away}
+      </div>
+      <div class="hero-meta">
+        <div class="league-tag">${m.league}</div>
+        <div class="countdown">${countdownStr(d - new Date())}</div>
+        <div class="kickoff-date">${fmtDay(d)} · ${fmtTime(d)} (Ташкент)</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderList(){
+  const filtered = matches.filter(m => {
+    const leagueOk = activeLeague === "all" || m.league === activeLeague;
+    const term = searchTerm.trim().toLowerCase();
+    const searchOk = !term || m.home.toLowerCase().includes(term) || m.away.toLowerCase().includes(term);
+    return leagueOk && searchOk;
+  });
+
+  renderHero(filtered);
+
+  const listEl = document.getElementById('matchList');
+  if(filtered.length === 0){
+    listEl.innerHTML = `<div class="empty">Матчи не найдены. Попробуйте другой фильтр или команду.</div>`;
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(m => {
+    const d = new Date(m.start);
+    const key = d.toDateString();
+    if(!groups[key]) groups[key] = {date:d, items:[]};
+    groups[key].items.push(m);
+  });
+
+  let html = "";
+  Object.values(groups).forEach(group => {
+    html += `<div class="day-group">
+      <div class="day-header">
+        <div class="date">${fmtDay(group.date)}</div>
+        <div class="rule"></div>
+      </div>`;
+    group.items.forEach(m => {
+      const d = new Date(m.start);
+      const homeColor = m.prob.home >= m.prob.away ? '#e8b23d' : '#4a7a63';
+      const awayColor = m.prob.away >= m.prob.home ? '#e8b23d' : '#4a7a63';
+      html += `
+        <div class="ticket">
+          <div class="time">${fmtTime(d)}</div>
+          <div class="matchup">
+            <span class="home">${m.home}</span>
+            <span class="dash">—</span>
+            <span class="away">${m.away}</span>
+          </div>
+          <div class="league-pill">${leagueShort(m.league)}</div>
+          <div class="form-bar">
+            <div style="width:${m.prob.home}%; background:${homeColor}"></div>
+            <div style="width:${m.prob.draw}%; background:#8a8578"></div>
+            <div style="width:${m.prob.away}%; background:${awayColor}"></div>
+          </div>
+        </div>`;
+    });
+    html += `</div>`;
+  });
+  listEl.innerHTML = html;
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeLeague = btn.dataset.league;
+    renderList();
+  });
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  renderList();
+});
+
+renderList();
+setInterval(renderList, 60000);
+</script>
+</body>
+</html>
